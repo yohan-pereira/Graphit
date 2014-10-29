@@ -1,7 +1,6 @@
 (ns tabpane
   (:import (javax.swing JPanel JTabbedPane BoxLayout SwingUtilities)
-           (java.awt Dimension))
-  (:use clojure.contrib.seq-utils))
+           (java.awt Dimension)))
 
 (defn tabpane [page-size]
   (let [panel (JTabbedPane.)]

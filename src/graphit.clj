@@ -16,9 +16,8 @@
            (java.awt BasicStroke Dimension Color BorderLayout FlowLayout)
            (java.nio ByteBuffer)
            (java.nio.channels Selector ServerSocketChannel SelectionKey))
-  (:use clojure.contrib.str-utils
-        clojure.contrib.duck-streams
-        clojure.contrib.command-line)
+  (:use clojure.java.io
+        clojure.tools.cli command_line)
   (:require tabpane)
 
   (:gen-class))
