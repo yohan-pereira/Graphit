@@ -39,7 +39,7 @@ build.  The steps:
 
   3.  Run the jar with, for example:
 
-        java -jar graphit.jar --redraw 2000 --port 6666
+        java -jar target/graphit-0.1.0-SNAPSHOT-standalone.jar  --redraw 2000 --port 6666
 
       This will redraw all graphs once every two seconds, and will
       listen on port 666 for data.
