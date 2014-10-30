@@ -24,25 +24,25 @@
 
 
 ;; Thread-shared vars
-(def *redraw-delay-ms* (atom 10000))
+(def ^:dynamic *redraw-delay-ms* (atom 10000))
 
-(def *data-gatherer* (agent []))
-(def *expire-threshold* (atom (Integer/MAX_VALUE)))
-(def *max-readings* (atom 120))
-(def *graphs-per-page* (atom 4))
+(def ^:dynamic *data-gatherer* (agent []))
+(def ^:dynamic *expire-threshold* (atom (Integer/MAX_VALUE)))
+(def ^:dynamic *max-readings* (atom 120))
+(def ^:dynamic *graphs-per-page* (atom 4))
 
-(def *tab-cycle-active* (atom false))
-(def *tab-cycle-delay* (atom 30))
+(def ^:dynamic *tab-cycle-active* (atom false))
+(def ^:dynamic *tab-cycle-delay* (atom 30))
 
-(def *graphs* (atom {}))
-(def *hide-legend* (atom nil))
+(def ^:dynamic *graphs* (atom {}))
+(def ^:dynamic *hide-legend* (atom nil))
 
-(def *datastream-listeners* (agent #{}))
+(def ^:dynamic *datastream-listeners* (agent #{}))
 
 
 ;; Objects used for interruptible sleeps
-(def *plot-alarm* (Object.))
-(def *tab-cycle-alarm* (Object.))
+(def ^:dynamic *plot-alarm* (Object.))
+(def ^:dynamic *tab-cycle-alarm* (Object.))
 
 
 ;;; Misc utilities
@@ -60,7 +60,7 @@
 
 ;;; Ah, swing...
 
-(def *window*
+(def ^:dynamic *window*
      {:frame (JFrame.)
       :panel (tabpane/tabpane *graphs-per-page*)})
 
