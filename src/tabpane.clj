@@ -27,7 +27,7 @@
     :tabs (map (fn [idx panels]
                  {:title (format "Group %d" idx)
                   :content (s/vertical-panel
-                             ;panels is a of the format [[graph "name"]...] 
+                             ;panels is a of the format [[graph index]...] 
                              ;use map to retrive the graphs
                              :items (map first panels))})
                (range 1 (inc (count @(:subpanels tabpane))))
@@ -51,6 +51,7 @@
 
 
 (defn cycle-tab [tabpane]
+  "cycles the selected tab."
   (s/invoke-later
     (when (> (.getTabCount (get-panel tabpane))
              1)
