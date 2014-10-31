@@ -427,8 +427,9 @@
 (defn separator []
   (s/separator :size [1 :by 20]))
 
-(defn make-control-panel []
+(defn make-control-panel 
   "creates the settings panel that is rendered above the graphs."
+  []
   (s/flow-panel
     :align :left
     :items [(s/label "Redraw rate:")
@@ -480,9 +481,10 @@
             (s/label " graphs/page")]))
 
 
-(defn make-status-bar []
+(defn make-status-bar 
   "Creates the status bar that is rendered above the graphs, 
   which contains the control panel and the dump points button"
+  []
   (s/border-panel 
     :west (make-control-panel)
     :east (s/button :text "Dump points"
