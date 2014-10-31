@@ -8,12 +8,9 @@
            (java.io BufferedReader PrintWriter File)
            (java.text NumberFormat DecimalFormat SimpleDateFormat)
            (java.util Date)
-           (javax.swing JFrame JPanel JTextField BoxLayout Box
-                        JLabel JMenuItem JOptionPane JButton SwingUtilities
-                        SwingConstants JCheckBox BorderFactory JSeparator)
            (java.net ServerSocket Socket InetSocketAddress)
-           (java.awt.event ActionListener ItemListener ItemEvent WindowAdapter)
-           (java.awt BasicStroke Dimension Color BorderLayout FlowLayout)
+           (java.awt.event ItemEvent)
+           (java.awt BasicStroke Dimension Color)
            (java.nio ByteBuffer)
            (java.nio.channels Selector ServerSocketChannel SelectionKey))
   (:use clojure.java.io)
@@ -50,7 +47,7 @@
 
 (defn interruptible-sleep [ms alarm]
   (locking alarm
-    (if (> ms 0)
+    (if (pos? ms)
       (.wait alarm ms)
       (.wait alarm))))
 
@@ -290,10 +287,11 @@
       (.addSeparator)
       (.add (menu-item "Delete this graph"
                        (fn [_]
-                         (when (= (JOptionPane/showConfirmDialog
+                         (when (s/confirm
                                    (:frame *window*)
-                                   "Really delete?")
-                                  JOptionPane/YES_OPTION)
+                                   "Really delete?"
+                                 :option-type :yes-no
+                                 :type :warning)
                            (remove-graph name))))))))
 
 
@@ -323,9 +321,8 @@
 
 
 (defn do-plot [values]
-  (SwingUtilities/invokeLater
-   (fn []
-     (print-exceptions
+  (s/invoke-later
+    (print-exceptions
 
       (doseq [{:keys [graph time line value]} values]
 
@@ -365,7 +362,7 @@
         (when-let [series (first (-> graph :lines vals))]
           (.fireSeriesChanged series)))
 
-      (send-off *data-gatherer* do-plot))))
+      (send-off *data-gatherer* do-plot)))
   (interruptible-sleep @*redraw-delay-ms* *plot-alarm*)
   [])
 
@@ -424,8 +421,6 @@
      (.printStackTrace e)
      (System/exit 1))))
 
-(defn separator []
-  (s/separator :size [1 :by 20]))
 
 (defn make-control-panel 
   "creates the settings panel that is rendered above the graphs."
@@ -443,30 +438,27 @@
                                    *plot-alarm*))])
             (s/label "ms")
 
-            (separator)
+            (s/separator :size [1 :by 20])
 
             ;; Tab cycling adjustment
             (s/checkbox
               :text "Cycle tabs every"
               :listen [:item #(try
-                                (println "tabcycle check")
                                 (reset! *tab-cycle-active*
                                         (= (.getStateChange %) ItemEvent/SELECTED))
                                 (catch Exception _)) ])
 
-            ;(.add (JLabel. "Cycle tabs every "))
             (s/text 
               :text (str @*tab-cycle-delay*) 
               :columns 3
               :listen [:action (fn [evt]
-                                 (println "tabcycle event")
                                  (set-rate
                                    *tab-cycle-delay*
                                    (Integer/parseInt (.getActionCommand evt))
                                    *tab-cycle-alarm*))])
             (s/label " secs")
 
-            (separator)
+            (s/separator :size [1 :by 20])
 
             ;; Graphs per page
             (s/label "Show ")
@@ -474,7 +466,6 @@
               :text (str @*graphs-per-page*) 
               :columns 3
               :listen [:action (fn [evt]
-                                 (println "page event")
                                  (reset! *graphs-per-page*
                                          (Integer. (.getActionCommand evt)))
                                  (tabpane/rebalance (:panel *window*)))])
@@ -602,7 +593,7 @@
       errors (exit 1 (error-msg errors)))    
 
     (.addShutdownHook (Runtime/getRuntime)
-                      (Thread. #(save-state)))
+                      (Thread. save-state))
 
     (set-rate *redraw-delay-ms* (Integer. redraw) *plot-alarm*)
     (when expire-threshold

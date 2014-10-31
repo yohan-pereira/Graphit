@@ -1,5 +1,5 @@
 (ns tabpane
-  (:import (javax.swing JPanel JTabbedPane BoxLayout SwingUtilities)
+  (:import (javax.swing JTabbedPane)
            (java.awt Dimension))
   (:require [seesaw.core :as s]))
 
