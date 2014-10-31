@@ -16,12 +16,11 @@
            (java.awt BasicStroke Dimension Color BorderLayout FlowLayout)
            (java.nio ByteBuffer)
            (java.nio.channels Selector ServerSocketChannel SelectionKey))
-  (:use clojure.java.io
-        clojure.tools.cli command_line)
+  (:use clojure.java.io)
   (:require tabpane
+            [clojure.tools.cli :refer [parse-opts]]
             [seesaw.border :as sb] 
             [seesaw.core :as s])
-
   (:gen-class))
 
 
@@ -540,20 +539,67 @@
    (catch Exception _
      [1280 :by 1024])))
 
+(def cli-options
+  [[nil "--max-to-keep ARG" "Maximum points to keep per line."
+    :default 120
+    :parse-fn #(Integer/parseInt %)]
+
+   [nil "--expire-threshold ARG" "The number of points a line can fall behind other lines before being expired."
+    :default nil
+    :parse-fn #(Integer/parseInt %)]
+
+   [nil "--hide-legend" "Don't display the graph's legend."]
+
+   [nil "--graphs-per-page ARG" "Number of graphs per tabbed page."
+    :default 4
+    :parse-fn #(Integer/parseInt %)]
+
+   ["-p" "--port PORT" "Listen port"
+    :default 6666
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
+
+   [nil "--datastream-port PORT" "Data stream port"
+    :default nil
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
+
+   [nil "--redraw ARG" "Redraw ms."
+    :default 2000
+    :parse-fn #(Integer/parseInt %)]
+
+   [nil "--geometry WxH" "Window dimensions (WxH)"
+    :default [1280 :by 1024]
+    :parse-fn parse-geometry]
+
+   ["-h" "--help"]])
+
+(defn usage 
+  "generates the help text"
+  [options]
+  (clojure.string/join \newline ["A handy graphing thingy." 
+                                 options]))
+(defn error-msg [errors]
+  (str "Invalid arguments. Run with --help to see available arguments.\n\n"
+       (clojure.string/join \newline errors)))
+
+(defn exit [status msg]
+  (println msg)
+  (System/exit status))
 
 (defn -main [& args]
-  (with-command-line args
-    "A handy graphing thingy"
-    [[max-to-keep "Maximum points to keep per line" "120"]
-     [expire-threshold
-      "The number of points a line can fall behind other lines before being expired."
-      nil]
-     [hide-legend "Don't display the graph's legend"]
-     [graphs-per-page "Number of graphs per tabbed page" "4"]
-     [port "Listen port" "6666"]
-     [datastream-port "Data stream port" nil]
-     [redraw "Redraw ms" "2000"]
-     [geometry "Window dimensions (wxh)" "1280x1024"]]
+  (let [{:keys [errors options summary]} (parse-opts args cli-options)
+        {:keys [max-to-keep
+                expire-threshold
+                hide-legend 
+                graphs-per-page
+                port
+                datastream-port
+                redraw
+                geometry]}                options]
+    (cond
+      (:help options) (exit 0 (usage summary))
+      errors (exit 1 (error-msg errors)))    
 
     (.addShutdownHook (Runtime/getRuntime)
                       (Thread. #(save-state)))
@@ -575,4 +621,4 @@
        (when @*tab-cycle-active*
          (tabpane/cycle-tab (:panel *window*)))
        (interruptible-sleep (* @*tab-cycle-delay* 1000) *tab-cycle-alarm*)))
-    (run-ui (parse-geometry geometry))))
+    (run-ui geometry)))
