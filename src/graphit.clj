@@ -491,7 +491,7 @@
                     :listen [:action (fn [_]
                                        (try (save-state)
                                             (catch Exception _)))])
-    :border (sb/empty-border :thickness 5) 
+    :border (sb/empty-border :thickness 3) 
     :size [15 :by 33]))
 
 
