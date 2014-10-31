@@ -279,9 +279,8 @@
 
 
 (defn menu-item [label f]
-  (doto (JMenuItem. label)
-    (.setActionCommand "PROPERTIES")
-    (.addActionListener (action-listener f))))
+  (s/menu-item :text label
+               :listen [:action f]))
 
 
 ;; A terrible hack ;o)
