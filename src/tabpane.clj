@@ -1,9 +1,10 @@
 (ns tabpane
   (:import (javax.swing JPanel JTabbedPane BoxLayout SwingUtilities)
-           (java.awt Dimension)))
+           (java.awt Dimension))
+  (:require [seesaw.core :as s]))
 
 (defn tabpane [page-size]
-  (let [panel (JTabbedPane.)]
+  (let [panel (s/tabbed-panel)]
     {:panel panel
      :page-size page-size
      :subpanels (atom #{})}))
@@ -17,50 +18,42 @@
   (count @(:subpanels tabpane)))
 
 
-(defn rebalance [tabpane]
+(defn rebalance 
+  "(re)structures the graphs and tabs."
+  [tabpane]
   (.removeAll (get-panel tabpane))
-  (dorun
-   (map (fn [idx panels]
-          (let [tab (format "Group %d" idx)
-                container (JPanel.)]
-            (doto container
-                    (.setLayout
-                     (BoxLayout. container BoxLayout/PAGE_AXIS)))
-
-            (doseq [[p name] panels]
-              (.add container p))
-
-            (.add (get-panel tabpane)
-                  tab
-                  container)))
-        (range 1 (inc (count @(:subpanels tabpane))))
-        (partition-all @(:page-size tabpane)
-                       (sort-by second @(:subpanels tabpane)))))
-  (.revalidate (get-panel tabpane)))
+  (s/config! 
+    (get-panel tabpane)
+    :tabs (map (fn [idx panels]
+                 {:title (format "Group %d" idx)
+                  :content (s/vertical-panel
+                             ;panels is a of the format [[graph "name"]...] 
+                             ;use map to retrive the graphs
+                             :items (map first panels))})
+               (range 1 (inc (count @(:subpanels tabpane))))
+               (partition-all @(:page-size tabpane)
+                              (sort-by second @(:subpanels tabpane))))))
 
 
 (defn add-panel [tabpane panel name]
-  (SwingUtilities/invokeLater
-   (fn []
-     (swap! (:subpanels tabpane) conj [panel name])
-     (rebalance tabpane))))
+  (s/invoke-later
+    (swap! (:subpanels tabpane) conj [panel name])
+    (rebalance tabpane)))
 
 
 (defn remove-panel [tabpane panel]
-  (SwingUtilities/invokeLater
-   (fn []
-     (swap! (:subpanels tabpane)
-            (fn [subpanels]
-              (remove #(= (first %) panel)
-                      subpanels)))
-     (rebalance tabpane))))
+  (s/invoke-later
+    (swap! (:subpanels tabpane)
+           (fn [subpanels]
+             (remove #(= (first %) panel)
+                     subpanels)))
+    (rebalance tabpane)))
 
 
 (defn cycle-tab [tabpane]
-  (SwingUtilities/invokeLater
-   (fn []
-     (when (> (.getTabCount (get-panel tabpane))
-              1)
-       (.setSelectedIndex (get-panel tabpane)
-                          (mod (inc (.getSelectedIndex (get-panel tabpane)))
-                               (.getTabCount (get-panel tabpane))))))))
+  (s/invoke-later
+    (when (> (.getTabCount (get-panel tabpane))
+             1)
+      (s/selection! (get-panel tabpane)
+                    (mod (inc (.getSelectedIndex (get-panel tabpane)))
+                         (.getTabCount (get-panel tabpane)))))))
