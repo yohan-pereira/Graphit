@@ -64,6 +64,7 @@
 
 (def ^:dynamic *window*
      {:frame (s/frame :title "Graphit"
+                      :minimum-size [800 :by 600]
                       :on-close :exit)
       :panel (tabpane/tabpane *graphs-per-page*)})
 
