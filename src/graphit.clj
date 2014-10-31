@@ -18,7 +18,9 @@
            (java.nio.channels Selector ServerSocketChannel SelectionKey))
   (:use clojure.java.io
         clojure.tools.cli command_line)
-  (:require tabpane)
+  (:require tabpane
+            [seesaw.border :as sb] 
+            [seesaw.core :as s])
 
   (:gen-class))
 
@@ -61,7 +63,8 @@
 ;;; Ah, swing...
 
 (def ^:dynamic *window*
-     {:frame (JFrame.)
+     {:frame (s/frame :title "Graphit"
+                      :on-close :exit)
       :panel (tabpane/tabpane *graphs-per-page*)})
 
 
@@ -433,95 +436,82 @@
      (.printStackTrace e)
      (System/exit 1))))
 
-
-
-
 (defn separator []
-  (doto (JPanel.)
-    (.add (Box/createHorizontalStrut 5))
-    (.add (doto (JSeparator. SwingConstants/VERTICAL)
-            (.setPreferredSize (Dimension. 1 10))))
-    (.add (Box/createHorizontalStrut 5))))
-
+  (s/separator :size [1 :by 20]))
 
 (defn make-control-panel []
-  (doto (JPanel.)
-    ;; Redraw rate adjustment
-    (.add (JLabel. "Redraw rate:"))
-    (.add (doto (JTextField.)
-
-            (.addActionListener (action-listener
-                                 #(set-rate
+  (s/flow-panel
+    :align :left
+    :items [(s/label "Redraw rate:")
+            (s/text
+              :text (str @*redraw-delay-ms*)
+              :columns 6
+              :listen [:action (fn [evt]
+                                 (set-rate
                                    *redraw-delay-ms*
-                                   (Integer. (.getActionCommand %))
-                                   *plot-alarm*)))
-            (.setColumns 6)
-            (.setText (str @*redraw-delay-ms*))))
-    (.add (JLabel. "ms"))
+                                   (Integer/parseInt (.getActionCommand evt))
+                                   *plot-alarm*))])
+            (s/label "ms")
 
-    (.add (separator))
+            (separator)
 
-    ;; Tab cycling adjustment
-    (.add (doto (JCheckBox.)
-            (.addItemListener
-             (item-listener
-              #(try
-                (reset! *tab-cycle-active*
-                        (= (.getStateChange %) ItemEvent/SELECTED))
-                (catch Exception _))))))
-    (.add (JLabel. "Cycle tabs every "))
-    (.add (doto (JTextField. nil (str @*tab-cycle-delay*) 3)
-            (.addActionListener
-             (action-listener
-              #(set-rate *tab-cycle-delay*
-                         (Integer. (.getActionCommand %))
-                         *tab-cycle-alarm*)))))
-    (.add (JLabel. " secs"))
+            ;; Tab cycling adjustment
+            (s/checkbox
+              :text "Cycle tabs every"
+              :listen [:item #(try
+                                (println "tabcycle check")
+                                (reset! *tab-cycle-active*
+                                        (= (.getStateChange %) ItemEvent/SELECTED))
+                                (catch Exception _)) ])
 
-    (.add (separator))
+            ;(.add (JLabel. "Cycle tabs every "))
+            (s/text 
+              :text (str @*tab-cycle-delay*) 
+              :columns 3
+              :listen [:action (fn [evt]
+                                 (println "tabcycle event")
+                                 (set-rate
+                                   *tab-cycle-delay*
+                                   (Integer/parseInt (.getActionCommand evt))
+                                   *tab-cycle-alarm*))])
+            (s/label " secs")
 
-    ;; Graphs per page
-    (.add (JLabel. "Show "))
-    (.add (doto (JTextField. nil (str @*graphs-per-page*) 3)
-            (.addActionListener
-             (action-listener
-              #(do
-                 (reset! *graphs-per-page*
-                         (Integer. (.getActionCommand %)))
-                 (tabpane/rebalance (:panel *window*)))))))
-    (.add (JLabel. " graphs/page"))
-    (.setLayout (doto (FlowLayout.)
-                  (.setAlignment FlowLayout/LEFT)))))
+            (separator)
+
+            ;; Graphs per page
+            (s/label "Show ")
+            (s/text 
+              :text (str @*graphs-per-page*) 
+              :columns 3
+              :listen [:action (fn [evt]
+                                 (println "page event")
+                                 (reset! *graphs-per-page*
+                                         (Integer. (.getActionCommand evt)))
+                                 (tabpane/rebalance (:panel *window*)))])
+            (s/label " graphs/page")]))
 
 
 (defn make-status-bar []
-  (doto (JPanel.)
-    (.setPreferredSize (Dimension. 15 33))
-    (.setBorder (BorderFactory/createEmptyBorder 5 5 5 5))
-    (.setLayout (BorderLayout.))
-    (.add (make-control-panel) BorderLayout/WEST)
-    (.add (doto (JButton. "Dump points")
-            (.addActionListener (action-listener
-                                 (fn [_]
-                                   (try (save-state)
-                                        (catch Exception _))))))
-          BorderLayout/EAST)))
+  (s/border-panel 
+    :west (make-control-panel)
+    :east (s/button :text "Dump points"
+                    :listen [:action (fn [_]
+                                       (try (save-state)
+                                            (catch Exception _)))])
+    :border (sb/empty-border :thickness 5) 
+    :size [15 :by 33]))
 
 
 (defn run-ui [geometry]
-  (SwingUtilities/invokeLater
-   (fn []
-     (.setLayout (.getContentPane (:frame *window*))
-                 (BorderLayout.))
-     (doto (:frame *window*)
-       (.addWindowListener
-        (proxy [WindowAdapter] []
-          (windowClosed [e] (save-state))))
-       (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
-       (.add (make-status-bar) BorderLayout/NORTH)
-       (.add (tabpane/get-panel (:panel *window*)))
-       (.setSize geometry)
-       (.setVisible true)))))
+  (s/invoke-later
+    (doto (:frame *window*)
+      (s/config! :content (s/border-panel
+                            :north (make-status-bar)
+                            :center (tabpane/get-panel (:panel *window*))))
+      ;does not work
+      ;(s/listen :window-closed (fn [_] (save-state)))
+      (s/config! :size geometry)
+      (s/show!))))
 
 
 (defn datastream-handler [port]
@@ -551,9 +541,9 @@
 (defn parse-geometry [s]
   (try
    (let [[w h] (map #(Integer/valueOf %) (.split s "[xX]"))]
-     (Dimension. w h))
+     [w :by h])
    (catch Exception _
-     (Dimension. 1280 1024))))
+     [1280 :by 1024])))
 
 
 (defn -main [& args]
