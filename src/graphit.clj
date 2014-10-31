@@ -267,17 +267,6 @@
   (hide-graph graphname true)
   (swap! *graphs* dissoc graphname))
 
-
-(defn item-listener [fn]
-  (proxy [ItemListener] []
-    (itemStateChanged [e] (fn e))))
-
-(defn action-listener [fn]
-  (proxy [ActionListener] []
-    (actionPerformed [e] (try (fn e)
-                          (catch Exception _)))))
-
-
 (defn menu-item [label f]
   (s/menu-item :text label
                :listen [:action f]))
@@ -439,6 +428,7 @@
   (s/separator :size [1 :by 20]))
 
 (defn make-control-panel []
+  "creates the settings panel that is rendered above the graphs."
   (s/flow-panel
     :align :left
     :items [(s/label "Redraw rate:")
@@ -491,6 +481,8 @@
 
 
 (defn make-status-bar []
+  "Creates the status bar that is rendered above the graphs, 
+  which contains the control panel and the dump points button"
   (s/border-panel 
     :west (make-control-panel)
     :east (s/button :text "Dump points"
@@ -502,6 +494,7 @@
 
 
 (defn run-ui [geometry]
+  "initlises the ui content."
   (s/invoke-later
     (doto (:frame *window*)
       (s/config! :content (s/border-panel
